@@ -1,12 +1,16 @@
 const express = require("express");
+const cookieParser = require("cookie-parser");
 
-const { encryptPassword } = require("./utils/passwordUtils");
+const { encryptPassword, decryptPassword } = require("./utils/passwordUtils");
 const { checkValidity } = require("./middleware/validity");
+const { createToken } = require("./utils/tokenUtils");
 
 const app = express();
 app.use(express.json());
+app.use(cookieParser());
 
 const port = process.env.PORT || 3001;
+const SECRET = process.env.SECRET || "secret";
 
 const USERS = [];
 
@@ -25,9 +29,16 @@ const QUESTIONS = [
 
 const SUBMISSION = [];
 
+// Returns username if successful
 app.post("/signup", checkValidity, async function (req, res) {
   const { email } = req.body;
   let { password } = req.body;
+
+  userPresent = USERS.find((user) => user.email === email);
+  if (userPresent) {
+    res.status(409).json({ error: "user already present" });
+    return;
+  }
 
   password = await encryptPassword(password);
 
@@ -36,19 +47,27 @@ app.post("/signup", checkValidity, async function (req, res) {
   res.status(200).json({ user: email });
 });
 
-app.post("/login", function (req, res) {
-  // Add logic to decode body
+// Returns token as cookie if successful
+app.post("/login", checkValidity, async function (req, res) {
   const { email, password } = req.body;
-  // body should have email and password
 
-  // Check if the user with the given email exists in the USERS array
-  // Also ensure that the password is the same
+  userPresent = USERS.find((user) => user.email === email);
+  if (!userPresent) {
+    res.status(404).json({ error: "user not found" });
+    return;
+  }
 
-  // If the password is the same, return back 200 status code to the client
-  // Also send back a token (any random string will do for now)
-  // If the password is not the same, return back 401 status code to the client
+  const passwordMatch = await decryptPassword(password, userPresent.password);
 
-  res.send("Hello World from route 2!");
+  if (!passwordMatch) {
+    res.status(401).json({ error: "wrong user credentials" });
+    return;
+  }
+
+  const token = createToken(email, SECRET);
+
+  res.cookie("token", token);
+  res.status(200).json({ success: "you are logged in" });
 });
 
 app.get("/questions", function (req, res) {

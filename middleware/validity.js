@@ -4,7 +4,6 @@ exports.checkValidity = (req, res, next) => {
 
   if (!email || !password) {
     res.status(400).json({ error: "user input is invalid" });
-    // return;
   } else {
     next();
   }
