@@ -1,10 +1,12 @@
 const express = require("express");
 
 const { encryptPassword } = require("./utils/passwordUtils");
+const { checkValidity } = require("./middleware/validity");
 
 const app = express();
 app.use(express.json());
-const port = 3001;
+
+const port = process.env.PORT || 3001;
 
 const USERS = [];
 
@@ -23,27 +25,20 @@ const QUESTIONS = [
 
 const SUBMISSION = [];
 
-app.post("/signup", async function (req, res) {
-  // Add logic to decode body
+app.post("/signup", checkValidity, async function (req, res) {
   const { email } = req.body;
   let { password } = req.body;
-  //Store email and password (as is for now) in the USERS array above (only if the user with the given email doesnt exist)
-
-  if (!email || !password) {
-    res.status(400).json({ error: "user input is invalid" });
-    return;
-  }
 
   password = await encryptPassword(password);
 
   USERS.push({ email, password });
 
-  console.log(USERS);
   res.status(200).json({ user: email });
 });
 
 app.post("/login", function (req, res) {
   // Add logic to decode body
+  const { email, password } = req.body;
   // body should have email and password
 
   // Check if the user with the given email exists in the USERS array
