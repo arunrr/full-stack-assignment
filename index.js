@@ -4,6 +4,7 @@ const cookieParser = require("cookie-parser");
 const { encryptPassword, decryptPassword } = require("./utils/passwordUtils");
 const { checkValidity } = require("./middleware/validity");
 const { createToken } = require("./utils/tokenUtils");
+const { checkLoggedIn } = require("./middleware/auth");
 
 const app = express();
 app.use(express.json());
@@ -31,10 +32,10 @@ const SUBMISSION = [];
 
 // Returns username if successful
 app.post("/signup", checkValidity, async function (req, res) {
-  const { email } = req.body;
+  const { username } = req.body;
   let { password } = req.body;
 
-  userPresent = USERS.find((user) => user.email === email);
+  userPresent = USERS.find((user) => user.username === username);
   if (userPresent) {
     res.status(409).json({ error: "user already present" });
     return;
@@ -42,16 +43,16 @@ app.post("/signup", checkValidity, async function (req, res) {
 
   password = await encryptPassword(password);
 
-  USERS.push({ email, password });
+  USERS.push({ username, password });
 
-  res.status(200).json({ user: email });
+  res.status(200).json({ username });
 });
 
 // Returns token as cookie if successful
 app.post("/login", checkValidity, async function (req, res) {
-  const { email, password } = req.body;
+  const { username, password } = req.body;
 
-  userPresent = USERS.find((user) => user.email === email);
+  userPresent = USERS.find((user) => user.username === username);
   if (!userPresent) {
     res.status(404).json({ error: "user not found" });
     return;
@@ -64,13 +65,13 @@ app.post("/login", checkValidity, async function (req, res) {
     return;
   }
 
-  const token = createToken(email, SECRET);
+  const token = createToken(username, SECRET);
 
   res.cookie("token", token);
   res.status(200).json({ success: "you are logged in" });
 });
 
-app.get("/questions", function (req, res) {
+app.get("/questions", checkLoggedIn, function (req, res) {
   //return the user all the questions in the QUESTIONS array
   res.send("Hello World from route 3!");
 });

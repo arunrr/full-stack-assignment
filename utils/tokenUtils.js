@@ -1,11 +1,14 @@
-const crypto = require("crypto");
+const jwt = require("jsonwebtoken");
 
 exports.createToken = (username, secret) => {
-  return crypto.createHmac("sha256", secret).update(username).digest("hex");
+  return jwt.sign({ username }, secret);
 };
 
-exports.verifyToken = (username, secret, token) => {
-  calculatedToken = this.createToken(username, secret);
-
-  return calculatedToken === token;
+exports.verifyToken = (secret, token) => {
+  try {
+    const username = jwt.verify(token, secret);
+    return username;
+  } catch (err) {
+    return err;
+  }
 };
